@@ -1,140 +1,115 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  InternalServerErrorException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import * as bcrypt from 'bcrypt'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Not, Repository, UpdateResult } from 'typeorm'
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
-import { AuthUserDto } from './dto/auth-user.dto';
-import { compare, genSalt, hash } from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
-import { UserAlreadyExistsException } from 'src/exceptions-intreceptors/exceptions/user-already-exist-exception';
 
+import { Repository } from 'typeorm'
+import { User } from './user.entity'
+import { UpdateUserDto } from './dto/updateUserDto'
+import { CreateUserDto } from './dto/createUserDto'
+import { Wish } from '../wishes/wish.entity'
+import { FindUsersDto } from './dto/findUsersDto'
 
 @Injectable()
 export class UsersService {
   constructor(
-    private jwtService: JwtService,
     @InjectRepository(User)
-    private userRepository: Repository<User>
+    private usersRepository: Repository<User>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User | HttpException> {
-    const { password, ...user } = createUserDto
-
-    const userCheck = await this.userRepository.findOneBy({
-      email: user.email
-    } || {
-      username: user.username
-    })
-
-    if(userCheck) {
-      return new UserAlreadyExistsException()
-    }   
-    
-    const salt = await genSalt(10);
-    const hashPassword = await hash(password, salt) 
-
-    this.userRepository.create({
-      password: hashPassword,
-      ...user
-    })
-
-    return this.userRepository.save(user)
+  async getHashedPassword(password: string) {
+    const salt = await bcrypt.genSalt()
+    return await bcrypt.hash(password, salt)
   }
 
-  async auth(authUserDto: AuthUserDto): Promise<any> {
-    let areEqual = false;
-
-    const user = await this.userRepository.findOne({
-      where: {
-        email: authUserDto.email,
-      }})
-
-    if(user) {
-      areEqual = await compare(authUserDto.password, user.password)
-
-      if(areEqual) {
-        const token = await this.jwtService.sign({ sub: user.id }, { expiresIn: '7d' })
-        return { access_token: token }
-      }
-    }
-
-    return null
-  }
-
-  async validateFromYandex(yandexProfile) {
-    const user = await this.userRepository.findOne({
-      where: {
-        email: yandexProfile.email
+  async createUser(createUserDto: CreateUserDto) {
+    const { username, password, about, avatar, email  } = createUserDto
+    const hashedPassword = await this.getHashedPassword(password)
+    const newUser = this.usersRepository.create({
+      username,
+      password: hashedPassword,
+      about,
+      email,
+      avatar,
+    })
+    await this.usersRepository.save(newUser)
+    .catch(err => {
+      if (err.code === '23505') {
+        throw new ConflictException('Логин или почта заняты')
+      } else {
+        throw new InternalServerErrorException()
       }
     })
 
+    return newUser
+  }
+
+  async getUserPrivateInfo(username: string): Promise<User> {
+    const user = await this.usersRepository.findOneBy({ username })
     if (!user) {
-      return await this.create(yandexProfile);
-    }
-  
-    return user;
-
-  }
-
-  async validatePassword(username: string, password: string) {
-    const user = await this.userRepository.findOne({
-      where: {
-        username: username
-      }
-    }); 
-
-    if(user && await compare(password, user.password)) {
-      const { password, ...result } = user;
+      throw new NotFoundException(`${username} не существует`)
+    } else {
       return user
     }
   }
 
-  async findOne(username: string) {
-    const user = await this.userRepository.findOne({
-      where: {
-        username: username
-      }
-    })
+  async getUserPublicInfo(username: string): Promise<Partial<User>> {
+    const user = await this.getUserPrivateInfo(username)
+    const { email, offers, password,  wishlists, wishes, ...rest  } = user
 
-    if(user) {
+    return rest
+  }
+
+  getByUserId(id: number): Promise<User> {
+    const user = this.usersRepository.findOne({
+      where: { id },
+      relations: ['wishlists', 'wishes', 'offers'],
+    })
+    if (!user) {
+      throw new NotFoundException(`User with id ${id} does not exist`)
+    } else {
       return user
     }
-
-    return null
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<HttpException | UpdateResult> {
-    const { password, ...user } = updateUserDto
+  async updateUser(
+    id: number,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    const { password } = updateUserDto
+    if (password) {
+      const hashedPassword = await this.getHashedPassword(password)
+      updateUserDto = { ...updateUserDto, password: hashedPassword }
+    }
 
-    const userCheck = await this.userRepository.findBy({
-      username: updateUserDto.username
-    } || {
-      email: updateUserDto.email
-    } && {
-      id: Not(id)
-    })
-
-    if(userCheck.length) {
-      return new UserAlreadyExistsException()
-    }   
-    
-    const salt = await genSalt(10);
-    const hashPassword = await hash(password, salt) 
-
-    return this.userRepository.update(id, {
-      ...user,
-      password: hashPassword
-    })
+    return await this.usersRepository.update({ id }, updateUserDto)
+      .then(() => {
+        return this.getByUserId(id)  
+      })
+      .catch(err => {
+        throw new BadRequestException(`${err.detail}`)  
+      })
   }
 
-  async findMany(query: string) {
-    return this.userRepository.find({
-      where: {
-        username: query
-      } || {
-        email: query
-      }
+  async getUserWishesById(id: number): Promise<Wish[]> {
+    const user = await this.getByUserId(id)
+    return user.wishes
+  }
+
+  async getUserWishesByUsername(username: string): Promise<Wish[]> {
+    const user = await this.getUserPrivateInfo(username)
+    return user.wishes
+  }
+
+  getUsersByUsernameAndEmail(findUsersDto: FindUsersDto): Promise<User[]> {
+    const { query } = findUsersDto
+    return this.usersRepository.find({
+      where: [{ email: query }, { username: query }],
     })
   }
 }

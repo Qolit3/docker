@@ -1,26 +1,13 @@
-import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { UsersService } from './users.service';
-import { UsersController } from './users.controller';
-import { User } from './entities/user.entity';
-import { PassportModule } from '@nestjs/passport'
-import { JwtStrategy } from 'src/passport-strategys/jwt-strategy';
-import { JwtModule } from '@nestjs/jwt';
-import { jwtConstant } from 'src/constants/constants';
-import { LocalStrategy } from 'src/passport-strategys/local-strategy';
-import { YandexStrategy } from 'src/passport-strategys/yandex-strategy';
+import { Module } from '@nestjs/common'
+import { UsersController } from './users.controller'
+import { User } from './user.entity'
+import { UsersService } from './users.service'
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User]),
-    PassportModule,
-    JwtModule.registerAsync({
-      useFactory: async () => ({
-        secret: jwtConstant
-      })
-    })
-  ],
+  imports: [TypeOrmModule.forFeature([User])],
   controllers: [UsersController],
-  providers: [UsersService, JwtStrategy, LocalStrategy, YandexStrategy]
+  providers: [UsersService],
+  exports: [UsersService],
 })
 export class UsersModule {}

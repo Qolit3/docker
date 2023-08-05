@@ -1,36 +1,30 @@
-import { Controller, UseGuards, Get, Post, Body, Param, Req, UseFilters } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { CreateOfferDto } from './dto/createOfferDto';
+import { Offer } from './offer.entity';
+import { GetUser } from '../decorators/getUser.decorator';
 import { OffersService } from './offers.service';
-import { CreateOfferDto } from './dto/create-offer.dto';
-import { YandexGuard } from 'src/guards/yandex-guard';
-import { LocalGuard } from 'src/guards/local-guard';
-import { JwtGuard } from 'src/guards/jwt-guard';
-import { OfferOnOwnWishExceptionFilter } from 'src/exceptions-intreceptors/filters/offer-on-own-wish-exception-filter';
-import { OfferMoreThanWishPriceExceptionFilter } from 'src/exceptions-intreceptors/filters/offer-more-than-wish-price-exception-filter';
-
 
 @Controller('offers')
-@UseFilters(OfferOnOwnWishExceptionFilter)
-@UseFilters(OfferMoreThanWishPriceExceptionFilter)
+@UseGuards(AuthGuard('jwt'))
 export class OffersController {
-  constructor(
-    private readonly offersService: OffersService
-  ) {}
+  constructor(private readonly offersService: OffersService) {}
 
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
-  @Post()
-  async create(@Body() createOfferDto: CreateOfferDto, @Req() req) {
-    return this.offersService.create(createOfferDto, req.user.id)
-  }
-
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
   @Get()
-  findAll() {
-    return this.offersService.findAll();
+  getAllOffers(): Promise<Offer[]> {
+    return this.offersService.getAll();
   }
 
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.offersService.findOne(+id);
+  getOfferById(@Param('id') id: string): Promise<Offer> {
+    return this.offersService.getOfferById(+id);
+  }
+
+  @Post()
+  createOffer(
+    @Body() createOfferDto: CreateOfferDto,
+    @GetUser() user,
+  ): Promise<Offer> {
+    return this.offersService.createOffer(createOfferDto, user);
   }
 }

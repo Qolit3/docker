@@ -1,78 +1,62 @@
-import { Controller, Get, Post, Body, Patch, Param, UseFilters, Req, UseGuards, HttpException } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UserAlreadyExistsExceptionFilter } from 'src/exceptions-intreceptors/filters/user-already-exist-exception-filter';
-import { InvalidLoginExceptionFilter } from 'src/exceptions-intreceptors/filters/invalid-login-exception-filter';
-import { YandexGuard } from 'src/guards/yandex-guard';
-import { JwtGuard } from 'src/guards/jwt-guard';
-import { LocalGuard } from 'src/guards/local-guard';
-import { ValidationErrorExceptionFilter } from 'src/exceptions-intreceptors/filters/validation-error-exception-filter';
-import { UserAlreadyExistsException } from 'src/exceptions-intreceptors/exceptions/user-already-exist-exception';
+import {
+  Controller,
+  Body,
+  Param,
+  Get,
+  Post,
+  Patch,
+  UseGuards,
+} from '@nestjs/common'
+import { UsersService } from './users.service'
 
-@Controller('')
-@UseFilters(UserAlreadyExistsExceptionFilter)
-@UseFilters(InvalidLoginExceptionFilter)
-@UseFilters(ValidationErrorExceptionFilter)
+import { AuthGuard } from '@nestjs/passport'
+import { User } from './user.entity'
+import { UpdateUserDto } from './dto/updateUserDto'
+import { GetUser } from '../decorators/getUser.decorator'
+import { FindUsersDto } from './dto/findUsersDto'
+import { Wish } from '../wishes/wish.entity'
+
+@Controller('users')
+@UseGuards(AuthGuard('jwt'))
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private usersService: UsersService) {}
 
-  @Post('signup')
-  async create(@Body() createUserDto: CreateUserDto) {
-    const user = await this.usersService.create(createUserDto);
-    if(!(user instanceof HttpException)) {
-      return this.usersService.auth(user);
-    }
+  @Get('me')
+  getUser(@GetUser() user: User): Promise<User> {
+    return this.usersService.getByUserId(user.id)
   }
 
-  @Post('signin')
-  signin(@Req() req) {
-    return this.usersService.auth(req.user)
+  @Patch('me')
+  updateUser(
+    @GetUser() user: User,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    return this.usersService.updateUser(user.id, updateUserDto)
   }
 
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
-  @Get('users/me')
-  findMe(@Req() req) {
-    return this.usersService.findOne(req.user.id);
+  @Get('/me/wishes')
+  getUserWishes(@GetUser() user: User): Promise<Wish[]> {
+    return this.usersService.getUserWishesById(user.id)
   }
 
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
-  @Patch('users/me') 
-  patchMe(@Req() req, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(req.user.id, updateUserDto)
+  @Get(':username')
+  getUserByName(
+    @Param('username') username: string,
+  ): Promise<Partial<User>> {
+    return this.usersService.getUserPrivateInfo(username)
   }
 
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
-  @Get('users/:id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  @Get(':username/wishes')
+  getUserWishesByUsername(
+    @Param('username') username: string,
+  ): Promise<Wish[]> {
+    return this.usersService.getUserWishesByUsername(username)
   }
 
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
-  @Get('users/me/wishes')
-  async findMyWishes(@Req() req) {
-    const user = await this.usersService.findOne(req.user.id);
-
-    return user.wishes
+  @Post('find')
+  getUsersByUsernameOrEmail(
+    @Body() findUsersDto: FindUsersDto,
+  ): Promise<User[]> {
+    return this.usersService.getUsersByUsernameAndEmail(findUsersDto)
   }
-
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
-  @Get('users/:id/wishes')
-  async findWishes(@Param('id') id: string) {
-    const user = await this.usersService.findOne(id);
-
-    return user.wishes
-  }
-
-  @UseGuards(JwtGuard, LocalGuard, YandexGuard)
-  @Post('users/find')
-  async findMany(@Body() query: string) {
-    return this.usersService.findMany(query)
-  }
-  
-  @UseGuards(YandexGuard)
-  @Get('yandex/callback')
-  yandexCallback(@Req() req) {
-    return this.usersService.auth(req.user);
-  } 
 }

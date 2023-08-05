@@ -1,17 +1,13 @@
-import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { OffersService } from './offers.service';
-import { OffersController } from './offers.controller';
-import { Offer } from './entities/offer.entity';
-import { WishesService } from 'src/wishes/wishes.service';
-import { PassportModule } from '@nestjs/passport'
-import { YandexStrategy } from 'src/passport-strategys/yandex-strategy';
-import { LocalStrategy } from 'src/passport-strategys/local-strategy';
-import { JwtStrategy } from 'src/passport-strategys/jwt-strategy';
+import { Module } from '@nestjs/common'
+import { OffersController } from './offers.controller'
+import { Offer } from './offer.entity'
+import { WishesModule } from '../wishes/wishes.module'
+import { OffersService } from './offers.service'
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Offer]), PassportModule],
+  imports: [TypeOrmModule.forFeature([Offer]), WishesModule],
   controllers: [OffersController],
-  providers: [OffersService, WishesService, JwtStrategy, LocalStrategy, YandexStrategy]
+  providers: [OffersService],
 })
 export class OffersModule {}
