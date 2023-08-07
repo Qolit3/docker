@@ -9,9 +9,9 @@ async function bootstrap() {
   const corsOptions = {
     origin: ['http://kassiopeya.kpd.nomoredomains.work', 'https://kassiopeya.kpd.nomoredomains.work'],
     methods: [ 'PATCH', 'POST', 'HEAD', 'PUT','DELETE', 'GET'],
-    allowedHeaders: ['content-type', 'authorization'],
+    allowedHeaders: ['content-type', 'authorization', 'Access-Control-Allow-Origin'],
   };
-  app.enableCors(corsOptions);
+  app.enableCors(/*corsOptions*/);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
     

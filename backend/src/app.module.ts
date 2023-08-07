@@ -12,12 +12,12 @@ import { WishesModule } from './wishes/wishes.module'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
 const  {
-  HOST = 'postgres',
-  PORT = '5432',
-  DB = 'postgres',
-  USER = 'postgres',
-  PASSWORD = 'password'
-} = proccess.env
+  POSTGRES_HOST = 'postgres',
+  POSTGRES_PORT = '5432',
+  POSTGRES_DB = 'postgres',
+  POSTGRES_USER = 'postgres',
+  POSTGRES_PASSWORD = 'password'
+} = process.env
 
 
 @Module({
@@ -25,11 +25,11 @@ const  {
         TypeOrmModule.forRoot({
       type: 'postgres',
       port: 5432,
-      host: HOST,
-      password: PASSWORD,
-      username: USER,
+      host: POSTGRES_HOST,
+      password: POSTGRES_PASSWORD,
+      username: POSTGRES_USER,
       entities: [Offer, Wishlist, User, Wish],
-      database: DB,
+      database: POSTGRES_DB,
       synchronize: true,
     }),
     WishlistsModule,

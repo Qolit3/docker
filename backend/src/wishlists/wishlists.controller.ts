@@ -24,7 +24,7 @@ export class WishlistsController {
 
   @Get()
   getWishlists(): Promise<Wishlist[]> {
-    return this.wishlistsService.getAllWishlists();
+    return this.wishlistsService.getAlWishlists();
   }
 
   @Get(':id')
@@ -37,7 +37,7 @@ export class WishlistsController {
     @GetUser() user: User,
     @Body() createWishlistDto: CreateWishlistDto,
   ): Promise<Wishlist> {
-    return this.wishlistsService.createWishlist(user, createWishlistDto);
+    return this.wishlistsService.createWishlist(createWishlistDto, user);
   }
 
   @Patch(':id')
@@ -46,7 +46,7 @@ export class WishlistsController {
     @Body() updateWishlistDto: UpdateWishlistDto,
     @Param('id') id: string,
   ): Promise<Wishlist> {
-    return this.wishlistsService.updateWishlist(user, updateWishlistDto, +id);
+    return this.wishlistsService.updateWishlist(user, +id, updateWishlistDto);
   }
 
   @Delete(':id')
@@ -54,6 +54,6 @@ export class WishlistsController {
     @Param('id') id: number,
     @GetUser() user: User,
   ): Promise<{ message: string }> {
-    return this.wishlistsService.removeWishlist(+id, user);
+    return this.wishlistsService.removeWishlist(user, +id);
   }
 }

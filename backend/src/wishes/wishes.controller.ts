@@ -6,7 +6,7 @@ import {
   Patch,
   Param,
   UseGuards,
-  Post,
+  Post
 } from '@nestjs/common'
 import { WishesService } from './wishes.service'
 import { Wish } from './wish.entity'
@@ -22,7 +22,7 @@ export class WishesController {
 
   @Get()
   getAllWishes(): Promise<Wish[]> {
-    return this.wishesService.getAllWishes()
+    return this.wishesService.getAlWishes()
   }
 
   @Get('last')

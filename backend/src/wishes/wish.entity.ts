@@ -49,7 +49,7 @@ export class Wish {
   @IsOptional()
   raised: number;
 
-  @Column({ type: 'dec'})
+  @Column({ type: 'decimal'})
   @IsOptional()
   copied: number;
 
