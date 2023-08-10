@@ -3,9 +3,7 @@ version: '3'
 services:
   backend:
     container_name: backend
-    build: 
-      context: backend
-      dockerfile: Dockerfile
+    image: kassiopeya3/backend
     env_file: .env 
     ports:  
       - '4000:3000'
@@ -17,9 +15,7 @@ services:
 
   frontend:
     container_name: frontend
-    build: 
-      context: frontend
-      dockerfile: Dockerfile
+    image: kassiopeya3/frontend
     env_file:
       - .env
     ports:

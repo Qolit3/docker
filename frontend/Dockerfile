@@ -9,8 +9,9 @@ RUN npm run build \
 
 FROM nginx:1.23.1-alpine AS frontend
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY ./nginx/conf.d/default.conf /etc/nginx/conf.d
+EXPOSE 80
 
 
-CMD ["npm", "run", "start"]
+CMD ["nginx", "-g", "daemon off;"]
